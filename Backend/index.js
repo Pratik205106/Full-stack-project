@@ -3,7 +3,7 @@
 // const { Prisma } = require('./config/Prisma');
 // const app = express();
 // const port = 3000;
-// const hash = bcrypt('hash');  
+ 
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
@@ -23,14 +23,15 @@ app.get("/user", (req, res) => {
 })
 
 app.post('/user', async (req, res)=> {
+  try{
     console.log(req.body)
-    const { email, password } = req.body;
+    const { firstName, middleName, lastName, email, number, password, confirmPassword  } = req.body;
 
     //check if email exists//
     const checkEmail = await Prisma.user.findUnique(
 {where: {email} });
 if (checkEmail){
-  return res.status(404).json({ 
+  return res.status(400).json({ 
     message: "Email already exists" 
   });
 }
@@ -46,7 +47,11 @@ const saveData = await Prisma.user.create({
     password: hashpassword,
   },
 });
-
+res.status(201).json({ message: "User created successfully", user: saveData });
+} catch (error) {
+  console.error("Error:", error);
+  res.status(500).json({ message: "Internal Server Error" });
+}
 
 }) ;
 
