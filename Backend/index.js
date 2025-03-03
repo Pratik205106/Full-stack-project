@@ -65,13 +65,16 @@
 //   console.log(`Example app listening on port ${port}`)
 // });
 
-import express, { response } from 'express';
+import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { Prisma } from './config/Prisma.js';
 
 
 const app = express();
-app.use(cors())
-app.use(express.json()) 
+app.use(cors());
+app.use(express.json());
 
 app.get('/user', (req, res)=>{
   res.json({
@@ -81,13 +84,47 @@ app.get('/user', (req, res)=>{
   })
 })
 
-app.post('/user',(req, res)=>{
-  const data = req.body;
-console.log(data);
-res.json({
-  message: "Data got, thankyou", 
-})
-})
+app.post('/user', async(req, res)=>{
+  const {firstName, middleName, lastName, email, number, password} = req.body;
+
+  const checkEmail = await Prisma.user.findUnique({where: {email} });
+if(checkEmail){
+  return res.status(404).json({
+    Message: "Email already exists",
+  });
+}
+const salt = await bcrypt.genSalt(10);
+const hashpassword = await bcrypt.hash(password, salt);
+
+
+const saveData = await Prisma.User.create({
+  data: {
+    firstName: firstName,
+    middleName: middleName,
+    lastName: lastName,
+    email: email,
+    number: number,
+    password: hashpassword,
+    confirmPassword:hashpassword,
+  },
+});
+
+const token = jwt.sign(
+  {
+  id:saveData.id,
+  email: saveData.email,
+}, 
+"pratik",
+{
+  expiresIn: "1h",
+}
+);
+return res.status(200).json({
+  Message: "User created successfully",
+  data: saveData,
+  token: token, 
+});
+});
 app.listen(3000, ()=>{
   console.log('server is running on 3000')
 })
